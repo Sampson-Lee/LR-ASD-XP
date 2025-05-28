@@ -3,6 +3,9 @@ import time, os, torch, argparse, warnings, glob
 from dataLoader import train_loader, val_loader
 from utils.tools import *
 from ASD import ASD
+from IPython import embed
+import warnings
+warnings.filterwarnings("ignore")
 
 def main():
     # This code is modified based on this [repository](https://github.com/TaoRuijie/TalkNet-ASD).
@@ -17,8 +20,8 @@ def main():
     parser.add_argument('--batchSize',    type=int,   default=2000,  help='Dynamic batch size, default is 2000 frames')
     parser.add_argument('--nDataLoaderThread', type=int, default=64,  help='Number of loader threads')
     # Data path
-    parser.add_argument('--dataPathAVA',  type=str, default="AVADataPath", help='Save path of AVA dataset')
-    parser.add_argument('--savePath',     type=str, default="exps/exp1")
+    parser.add_argument('--dataPathAVA',  type=str, default="/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_fps5_png/", help='Save path of AVA dataset')
+    parser.add_argument('--savePath',     type=str, default="/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_fps5_png/")
     # Data selection
     parser.add_argument('--evalDataType', type=str, default="val", help='Only for AVA, to choose the dataset for evaluation, val or test')
     # For download dataset only, for evaluation only
@@ -32,15 +35,27 @@ def main():
         preprocess_AVA(args)
         quit()
 
-    loader = train_loader(trialFileName = args.trainTrialAVA, \
-                          audioPath      = os.path.join(args.audioPathAVA , 'train'), \
-                          visualPath     = os.path.join(args.visualPathAVA, 'train'), \
+    # loader = train_loader(trialFileName = args.trainTrialAVA, \
+    #                       audioPath      = os.path.join(args.audioPathAVA , 'train'), \
+    #                       visualPath     = os.path.join(args.visualPathAVA, 'train'), \
+    #                       **vars(args))
+    # trainLoader = torch.utils.data.DataLoader(loader, batch_size = 1, shuffle = True, num_workers = args.nDataLoaderThread, pin_memory = True, prefetch_factor = 2)
+
+    # loader = val_loader(trialFileName = args.evalTrialAVA, \
+    #                     audioPath     = os.path.join(args.audioPathAVA , args.evalDataType), \
+    #                     visualPath    = os.path.join(args.visualPathAVA, args.evalDataType), \
+    #                     **vars(args))
+    # valLoader = torch.utils.data.DataLoader(loader, batch_size = 1, shuffle = False, num_workers = 64, pin_memory = True)
+
+    loader = train_loader(trialFileName = '/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_fps5_png/csv/val_loader.csv', \
+                          audioPath      = '/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_fps5_png/audio_clips/', \
+                          visualPath     = '/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_fps5_png/video_clips/', \
                           **vars(args))
     trainLoader = torch.utils.data.DataLoader(loader, batch_size = 1, shuffle = True, num_workers = args.nDataLoaderThread, pin_memory = True, prefetch_factor = 2)
 
-    loader = val_loader(trialFileName = args.evalTrialAVA, \
-                        audioPath     = os.path.join(args.audioPathAVA , args.evalDataType), \
-                        visualPath    = os.path.join(args.visualPathAVA, args.evalDataType), \
+    loader = val_loader(trialFileName = '/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_fps5_png/csv/val_loader.csv', \
+                          audioPath      = '/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_fps5_png/audio_clips/', \
+                          visualPath     = '/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_fps5_png/video_clips/', \
                         **vars(args))
     valLoader = torch.utils.data.DataLoader(loader, batch_size = 1, shuffle = False, num_workers = 64, pin_memory = True)
 
@@ -48,6 +63,8 @@ def main():
         s = ASD(**vars(args))
         s.loadParameters('weight/pretrain_AVA.model')
         print("Model %s loaded from previous state!"%('pretrain_AVA.model'))
+        # s.loadParameters('weight/finetuning_TalkSet.model')
+        # print("Model %s loaded from previous state!"%('finetuning_TalkSet.model'))
         mAP = s.evaluate_network(loader = valLoader, **vars(args))
         print("mAP %2.2f%%"%(mAP))
         quit()
@@ -62,6 +79,7 @@ def main():
     else:
         epoch = 1
         s = ASD(epoch = epoch, **vars(args))
+        s.loadParameters('weight/pretrain_AVA.model')
 
     mAPs = []
     scoreFile = open(args.scoreSavePath, "a+")

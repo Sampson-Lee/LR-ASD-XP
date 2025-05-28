@@ -6,26 +6,65 @@ def generate_audio_set(dataPath, batchList):
     audioSet = {}
     for line in batchList:
         data = line.split('\t')
-        videoName = data[0][:11]
+        # videoName = data[0][:11]
+        videoName = '_'.join(data[0].split('_')[:-3])
         dataName = data[0]
         _, audio = wavfile.read(os.path.join(dataPath, videoName, dataName + '.wav'))
         audioSet[dataName] = audio
     return audioSet
 
+# def overlap(dataName, audio, audioSet):   
+#     available_keys = list(set(audioSet.keys()) - {dataName})
+    
+#     if not available_keys:
+#         return audio.astype(numpy.int16)
+    
+#     noiseName = random.choice(available_keys)  # 或者 random.sample(available_keys, 1)[0]
+
+#     # noiseName =  random.sample(set(list(audioSet.keys())) - {dataName}, 1)[0]
+#     noiseAudio = audioSet[noiseName]    
+#     snr = [random.uniform(-5, 5)]
+#     if len(noiseAudio) < len(audio):
+#         shortage = len(audio) - len(noiseAudio)
+#         noiseAudio = numpy.pad(noiseAudio, (0, shortage), 'wrap')
+#     else:
+#         noiseAudio = noiseAudio[:len(audio)]
+#     noiseDB = 10 * numpy.log10(numpy.mean(abs(noiseAudio ** 2)) + 1e-4)
+#     cleanDB = 10 * numpy.log10(numpy.mean(abs(audio ** 2)) + 1e-4)
+#     noiseAudio = numpy.sqrt(10 ** ((cleanDB - noiseDB - snr) / 10)) * noiseAudio
+#     audio = audio + noiseAudio    
+#     return audio.astype(numpy.int16)
+
 def overlap(dataName, audio, audioSet):   
-    noiseName =  random.sample(set(list(audioSet.keys())) - {dataName}, 1)[0]
-    noiseAudio = audioSet[noiseName]    
-    snr = [random.uniform(-5, 5)]
+    available_keys = list(set(audioSet.keys()) - {dataName})
+    
+    if len(available_keys) == 0:
+        noiseAudio = audio.copy()
+    else:
+        noiseName = random.sample(available_keys, 1)[0]
+        noiseAudio = audioSet[noiseName]
+    
+    # 统一转为1D数组
+    if len(audio.shape) > 1:
+        audio = numpy.mean(audio, axis=1)
+    if len(noiseAudio.shape) > 1:
+        noiseAudio = numpy.mean(noiseAudio, axis=1)
+    
+    # 调整长度
     if len(noiseAudio) < len(audio):
         shortage = len(audio) - len(noiseAudio)
         noiseAudio = numpy.pad(noiseAudio, (0, shortage), 'wrap')
     else:
         noiseAudio = noiseAudio[:len(audio)]
-    noiseDB = 10 * numpy.log10(numpy.mean(abs(noiseAudio ** 2)) + 1e-4)
-    cleanDB = 10 * numpy.log10(numpy.mean(abs(audio ** 2)) + 1e-4)
+    
+    # 混合音频
+    snr = random.uniform(-5, 5)
+    noiseDB = 10 * numpy.log10(numpy.mean(noiseAudio ** 2) + 1e-4)
+    cleanDB = 10 * numpy.log10(numpy.mean(audio ** 2) + 1e-4)
     noiseAudio = numpy.sqrt(10 ** ((cleanDB - noiseDB - snr) / 10)) * noiseAudio
-    audio = audio + noiseAudio    
-    return audio.astype(numpy.int16)
+    
+    mixed_audio = audio + noiseAudio
+    return mixed_audio.astype(numpy.int16)
 
 def load_audio(data, dataPath, numFrames, audioAug, audioSet = None):
     dataName = data[0]
@@ -48,9 +87,11 @@ def load_audio(data, dataPath, numFrames, audioAug, audioSet = None):
 
 def load_visual(data, dataPath, numFrames, visualAug): 
     dataName = data[0]
-    videoName = data[0][:11]
+    # videoName = data[0][:11]
+    videoName = '_'.join(data[0].split('_')[:-3])
     faceFolderPath = os.path.join(dataPath, videoName, dataName)
-    faceFiles = glob.glob("%s/*.jpg"%faceFolderPath)
+    # faceFiles = glob.glob("%s/*.jpg"%faceFolderPath)
+    faceFiles = glob.glob("%s/*.png"%faceFolderPath)
     sortedFaceFiles = sorted(faceFiles, key=lambda data: (float(data.split('/')[-1][:-4])), reverse=False) 
     faces = []
     H = 112

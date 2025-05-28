@@ -7,7 +7,7 @@ from subprocess import PIPE
 
 from loss import lossAV, lossV
 from model.Model import ASD_Model
-
+from IPython import embed
 
 class ASD(nn.Module):
     def __init__(self, lr = 0.001, lrDecay = 0.95, **kwargs):
@@ -58,7 +58,7 @@ class ASD(nn.Module):
         self.eval()
         predScores = []
         for audioFeature, visualFeature, labels in tqdm.tqdm(loader):
-            with torch.no_grad():                
+            with torch.no_grad(): 
                 audioEmbed  = self.model.forward_audio_frontend(audioFeature[0].cuda())
                 visualEmbed = self.model.forward_visual_frontend(visualFeature[0].cuda())
                 outsAV= self.model.forward_audio_visual_backend(audioEmbed, visualEmbed)  
@@ -66,7 +66,6 @@ class ASD(nn.Module):
                 _, predScore, _, _ = self.lossAV.forward(outsAV, labels)    
                 predScore = predScore[:,1].detach().cpu().numpy()
                 predScores.extend(predScore)
-                # break
         evalLines = open(evalOrig).read().splitlines()[1:]
         labels = []
         labels = pandas.Series( ['SPEAKING_AUDIBLE' for line in evalLines])
@@ -77,7 +76,9 @@ class ASD(nn.Module):
         evalRes.drop(['label_id'], axis=1,inplace=True)
         evalRes.drop(['instance_id'], axis=1,inplace=True)
         evalRes.to_csv(evalCsvSave, index=False)
+
         cmd = "python -O utils/get_ava_active_speaker_performance.py -g %s -p %s "%(evalOrig, evalCsvSave)
+        print(cmd)
         mAP = float(str(subprocess.run(cmd, shell=True, stdout=PIPE, stderr=PIPE).stdout).split(' ')[2][:5])
         return mAP
 

@@ -3,7 +3,7 @@ import torch.nn as nn
 
 from model.Classifier import Fusion, Detector
 from model.Encoder import visual_encoder, audio_encoder
-
+from IPython import embed
 
 class ASD_Model(nn.Module):
     def __init__(self):
