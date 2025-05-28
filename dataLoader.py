@@ -1,6 +1,7 @@
 import os, torch, numpy, cv2, random, glob, python_speech_features
 from scipy.io import wavfile
 from torchvision.transforms import RandomCrop
+from IPython import embed
 
 def generate_audio_set(dataPath, batchList):
     audioSet = {}
@@ -156,7 +157,7 @@ class train_loader(object):
             labels.append(load_label(data, numFrames))
         return torch.FloatTensor(numpy.array(audioFeatures)), \
                torch.FloatTensor(numpy.array(visualFeatures)), \
-               torch.LongTensor(numpy.array(labels))        
+               torch.LongTensor(numpy.array(labels))
 
     def __len__(self):
         return len(self.miniBatch)
