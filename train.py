@@ -61,7 +61,8 @@ def main():
 
     if args.evaluation == True:
         s = ASD(**vars(args))
-        s.loadParameters('weight/pretrain_AVA.model')
+        # s.loadParameters('weight/pretrain_AVA.model')
+        s.loadParameters("/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_fps5_png/model/model_0040.model")
         print("Model %s loaded from previous state!"%('pretrain_AVA.model'))
         # s.loadParameters('weight/finetuning_TalkSet.model')
         # print("Model %s loaded from previous state!"%('finetuning_TalkSet.model'))

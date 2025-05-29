@@ -24,6 +24,8 @@ class ASD(nn.Module):
         self.scheduler.step(epoch - 1)  # StepLR
         index, top1, lossV, lossAV, loss = 0, 0, 0, 0, 0
         lr = self.optim.param_groups[0]['lr']
+        video_correct = 0  # Number of correctly predicted videos
+        video_total = 0    # Total number of videos processed
         for num, (audioFeature, visualFeature, labels) in enumerate(loader, start=1):
             self.zero_grad()
 
@@ -33,22 +35,46 @@ class ASD(nn.Module):
             outsAV= self.model.forward_audio_visual_backend(audioEmbed, visualEmbed)  
             outsV = self.model.forward_visual_backend(visualEmbed)
 
-            labels = labels[0].reshape((-1)).cuda() # Loss
-            nlossAV, _, _, prec = self.lossAV.forward(outsAV, labels)
+            labels = labels[0].reshape((-1)).cuda()  # Loss
+            nlossAV, _, predLabel, correctNum = self.lossAV.forward(outsAV, labels)
             nlossV = self.lossV.forward(outsV, labels)
             nloss = nlossAV + 0.5 * nlossV
 
+            # Accumulate losses (unchanged)
             lossV += nlossV.detach().cpu().numpy()
             lossAV += nlossAV.detach().cpu().numpy()
             loss += nloss.detach().cpu().numpy()
-            top1 += prec
+            
+            # Video-level accuracy calculation
+            video_correct += correctNum.item()  # correctNum is 0 or 1 for this video
+            video_total += 1  # One video processed
+            
             nloss.backward()
             self.optim.step()
-            index += len(labels)
+            
+            # Updated progress display with video-level accuracy
             sys.stderr.write(time.strftime("%m-%d %H:%M:%S") + \
             " [%2d] Lr: %5f, Training: %.2f%%, "    %(epoch, lr, 100 * (num / loader.__len__())) + \
-            " LossV: %.5f, LossAV: %.5f, Loss: %.5f, ACC: %2.2f%% \r"  %(lossV/(num), lossAV/(num), loss/(num), 100 * (top1/index)))
-            sys.stderr.flush()  
+            " LossV: %.5f, LossAV: %.5f, Loss: %.5f, Video ACC: %2.2f%% \r"  %(
+                lossV/(num), lossAV/(num), loss/(num), 100 * (video_correct/video_total)))
+            sys.stderr.flush()
+            
+            # labels = labels[0].reshape((-1)).cuda() # Loss
+            # nlossAV, _, _, prec = self.lossAV.forward(outsAV, labels)
+            # nlossV = self.lossV.forward(outsV, labels)
+            # nloss = nlossAV + 0.5 * nlossV
+
+            # lossV += nlossV.detach().cpu().numpy()
+            # lossAV += nlossAV.detach().cpu().numpy()
+            # loss += nloss.detach().cpu().numpy()
+            # top1 += prec
+            # nloss.backward()
+            # self.optim.step()
+            # index += len(labels)
+            # sys.stderr.write(time.strftime("%m-%d %H:%M:%S") + \
+            # " [%2d] Lr: %5f, Training: %.2f%%, "    %(epoch, lr, 100 * (num / loader.__len__())) + \
+            # " LossV: %.5f, LossAV: %.5f, Loss: %.5f, ACC: %2.2f%% \r"  %(lossV/(num), lossAV/(num), loss/(num), 100 * (top1/index)))
+            # sys.stderr.flush()  
 
         sys.stdout.write("\n")      
 
