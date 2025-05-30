@@ -13,9 +13,9 @@ def main():
 
     parser = argparse.ArgumentParser(description = "Model Training")
     # Training details
-    parser.add_argument('--lr',           type=float, default=0.0005, help='Learning rate')
+    parser.add_argument('--lr',           type=float, default=0.0001, help='Learning rate')
     parser.add_argument('--lrDecay',      type=float, default=0.95,  help='Learning rate decay rate')
-    parser.add_argument('--maxEpoch',     type=int,   default=5,    help='Maximum number of epochs')
+    parser.add_argument('--maxEpoch',     type=int,   default=10,    help='Maximum number of epochs')
     parser.add_argument('--testInterval', type=int,   default=1,     help='Test and save every [testInterval] epochs')
     parser.add_argument('--batchSize',    type=int,   default=1,  help='Dynamic batch size, default is 2000 frames')
     parser.add_argument('--nDataLoaderThread', type=int, default=64,  help='Number of loader threads')
@@ -61,7 +61,7 @@ def main():
 
     if args.evaluation == True:
         s = ASD(**vars(args))
-        s.loadParameters("/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_train/model/model_0040.model")
+        s.loadParameters("/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_train/model0.0001_10/model_0005.model")
         # s.loadParameters('weight/pretrain_AVA.model')
         # print("Model %s loaded from previous state!"%('pretrain_AVA.model'))
         # s.loadParameters('weight/finetuning_TalkSet.model')

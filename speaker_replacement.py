@@ -489,9 +489,9 @@ class BatchSpeakerAnalyzer:
 def main():
     """主函数"""
     # 配置路径
-    csv_path = "/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_fps5_png/val_res.csv"
+    csv_path = "/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_test/csv/val_res.csv"
     transcript_base_dir = "/mnt/data2/datasets/xpeng/mmsi/ego4d/transcripts/anonymized/"
-    output_base_dir = "/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_fps5_png/transcripts_r"
+    output_base_dir = "/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_test/transcripts_r"
     
     # 创建分析器
     analyzer = BatchSpeakerAnalyzer()
