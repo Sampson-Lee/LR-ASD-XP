@@ -13,15 +13,15 @@ def main():
 
     parser = argparse.ArgumentParser(description = "Model Training")
     # Training details
-    parser.add_argument('--lr',           type=float, default=0.001, help='Learning rate')
+    parser.add_argument('--lr',           type=float, default=0.0005, help='Learning rate')
     parser.add_argument('--lrDecay',      type=float, default=0.95,  help='Learning rate decay rate')
-    parser.add_argument('--maxEpoch',     type=int,   default=40,    help='Maximum number of epochs')
+    parser.add_argument('--maxEpoch',     type=int,   default=5,    help='Maximum number of epochs')
     parser.add_argument('--testInterval', type=int,   default=1,     help='Test and save every [testInterval] epochs')
     parser.add_argument('--batchSize',    type=int,   default=1,  help='Dynamic batch size, default is 2000 frames')
     parser.add_argument('--nDataLoaderThread', type=int, default=64,  help='Number of loader threads')
     # Data path
-    parser.add_argument('--dataPathAVA',  type=str, default="/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_fps5_png/", help='Save path of AVA dataset')
-    parser.add_argument('--savePath',     type=str, default="/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_fps5_png/")
+    parser.add_argument('--dataPathAVA',  type=str, default="/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_train/", help='Save path of AVA dataset')
+    parser.add_argument('--savePath',     type=str, default="/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_train/")
     # Data selection
     parser.add_argument('--evalDataType', type=str, default="val", help='Only for AVA, to choose the dataset for evaluation, val or test')
     # For download dataset only, for evaluation only
@@ -47,31 +47,32 @@ def main():
     #                     **vars(args))
     # valLoader = torch.utils.data.DataLoader(loader, batch_size = 1, shuffle = False, num_workers = 64, pin_memory = True)
 
-    loader = train_loader(trialFileName = '/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_fps5_png/csv/val_loader.csv', \
-                          audioPath      = '/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_fps5_png/audio_clips/', \
-                          visualPath     = '/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_fps5_png/video_clips/', \
+    loader = train_loader(trialFileName = '/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_train/csv/val_loader.csv', \
+                          audioPath      = '/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_train/audio_clips/', \
+                          visualPath     = '/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_train/video_clips/', \
                           **vars(args))
     trainLoader = torch.utils.data.DataLoader(loader, batch_size = 1, shuffle = True, num_workers = args.nDataLoaderThread, pin_memory = True, prefetch_factor = 2)
 
-    loader = val_loader(trialFileName = '/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_fps5_png/csv/val_loader.csv', \
-                          audioPath      = '/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_fps5_png/audio_clips/', \
-                          visualPath     = '/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_fps5_png/video_clips/', \
+    loader = val_loader(trialFileName = '/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_test/csv/val_loader.csv', \
+                          audioPath      = '/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_test/audio_clips/', \
+                          visualPath     = '/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_test/video_clips/', \
                         **vars(args))
     valLoader = torch.utils.data.DataLoader(loader, batch_size = 1, shuffle = False, num_workers = 64, pin_memory = True)
 
     if args.evaluation == True:
         s = ASD(**vars(args))
+        s.loadParameters("/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_train/model/model_0040.model")
         # s.loadParameters('weight/pretrain_AVA.model')
-        s.loadParameters("/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_fps5_png/model/model_0040.model")
-        print("Model %s loaded from previous state!"%('pretrain_AVA.model'))
+        # print("Model %s loaded from previous state!"%('pretrain_AVA.model'))
         # s.loadParameters('weight/finetuning_TalkSet.model')
         # print("Model %s loaded from previous state!"%('finetuning_TalkSet.model'))
-        mAP = s.evaluate_network(loader = valLoader, **vars(args))
+        mAP = s.evaluate_network(loader = valLoader, evalCsvSave = "/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_test/csv/val_res.csv", \
+                                evalOrig = "/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_test/csv/val_orig.csv")
         print("mAP %2.2f%%"%(mAP))
         quit()
 
     modelfiles = glob.glob('%s/model_0*.model'%args.modelSavePath)
-    modelfiles.sort()  
+    modelfiles.sort()
     if len(modelfiles) >= 1:
         print("Model %s loaded from previous state!"%modelfiles[-1])
         epoch = int(os.path.splitext(os.path.basename(modelfiles[-1]))[0][6:]) + 1
@@ -85,12 +86,14 @@ def main():
     mAPs = []
     scoreFile = open(args.scoreSavePath, "a+")
 
-    while(1):        
+    while(1):
         loss, lr = s.train_network(epoch = epoch, loader = trainLoader, **vars(args))
         
         if epoch % args.testInterval == 0:        
             s.saveParameters(args.modelSavePath + "/model_%04d.model"%epoch)
-            mAPs.append(s.evaluate_network(epoch = epoch, loader = valLoader, **vars(args)))
+            mAPs.append(s.evaluate_network(epoch = epoch, loader = valLoader, \
+                        evalCsvSave = "/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_test/csv/val_res.csv", \
+                        evalOrig = "/mnt/data2/datasets/xpeng/mmsi/ego4d_asd_test/csv/val_orig.csv"))
             print(time.strftime("%Y-%m-%d %H:%M:%S"), "%d epoch, mAP %2.2f%%, bestmAP %2.2f%%"%(epoch, mAPs[-1], max(mAPs)))
             scoreFile.write("%d epoch, LR %f, LOSS %f, mAP %2.2f%%, bestmAP %2.2f%%\n"%(epoch, lr, loss, mAPs[-1], max(mAPs)))
             scoreFile.flush()

@@ -92,7 +92,7 @@ def load_visual(data, dataPath, numFrames, visualAug):
     videoName = '_'.join(data[0].split('_')[:-3])
     faceFolderPath = os.path.join(dataPath, videoName, dataName)
     # faceFiles = glob.glob("%s/*.jpg"%faceFolderPath)
-    faceFiles = glob.glob("%s/*.png"%faceFolderPath)
+    faceFiles = glob.glob("%s/*.jpg"%faceFolderPath)
     sortedFaceFiles = sorted(faceFiles, key=lambda data: (float(data.split('/')[-1][:-4])), reverse=False) 
     faces = []
     H = 112
